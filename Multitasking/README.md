@@ -1,0 +1,2 @@
+# Multitasking
+Este script muestra como implementar multitasking o multithreading en la placa ESP32 utilizando el tipo ```TaskHandle_t``` y las funciones ```xTaskCreatePinnedToCore``` y ```xTaskCreate```.
