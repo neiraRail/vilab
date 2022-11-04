@@ -1,0 +1,2 @@
+# Multipart
+Este script muestra un ejemplo de cómo enviar un archivo en formato multipart a través del protocolo HTTP. Esto se realiza utilizando la librería [ESP32_multipart](https://github.com/neiraRail/ESP32_multipart).
