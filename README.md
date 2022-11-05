@@ -3,7 +3,7 @@ Conjunto de scripts que en su conjunto buscan implementar un sistema de detecci√
 
 [1. Read IMU.](/Read%20IMU/)
 
-2. Motion detection.
+[2. Motion detection.](/Motion%20detection/)
 
 [3. File system.](/Filesystem/)
 
