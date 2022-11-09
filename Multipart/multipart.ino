@@ -1,10 +1,10 @@
 #include<ESP8266_multipart.h>
-//#include "SPIFFS.h"
+#include "SPIFFS.h"
 
 File file;
 
-char* ssid     = "railxalkan";
-char* password = "familiarailxalkan";
+char* ssid     = "CEIS";
+char* password = "CEIS.2022";
 
 
 void setup() {
@@ -30,7 +30,7 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   
-  file = SPIFFS.open("/cuatro.txt", "r");
+  file = SPIFFS.open("/tres.txt", "r");
   
   if(!file){
     Serial.println("Failed to open file for reading");
@@ -40,7 +40,7 @@ void setup() {
   Serial.println("TODO beum abriendi eu arqivo");
   delay(1000);
   Serial.println("Enviando archivo....");
-  ESP8266_multipart multipart("192.168.18.3"); // Sets the host to myexampleserver.com and the port to 80
+  ESP8266_multipart multipart("192.168.1.107"); // Sets the host to myexampleserver.com and the port to 80
   delay(1000);
   multipart.setPort(5000); // Sets the port to 8772
   delay(1000);
