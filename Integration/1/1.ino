@@ -4,9 +4,9 @@
 #include <Adafruit_Sensor.h>
 #include <ESP32_multipart.h>
 
-char* _ssid     = "CEIS";           //Nombre de la red
-char* _password = "CEIS.2022";      //Contraseña de la red
-char* _server   = "172.40.28.125";  //IP del servidor de envio de archivos
+char* _ssid     = "***";           //Nombre de la red
+char* _password = "***";      //Contraseña de la red
+char* _server   = "****";  //IP del servidor de envio de archivos
 int   _port     = 5000;             //Puerto en el que esta escuchando el servidor de envio
 
 int _windowTime     = 2000;                   //Tiempo mínimo para capturar datos
