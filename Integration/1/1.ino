@@ -126,7 +126,7 @@ String _registroAJson(Lectura lectura){
   String json = "{ \"time\": \" " +(String)millis() + "\",";
   json += " \"acc_x\": \" "+(String)lectura.getAcc()[0]+"\",";
   json += " \"acc_y\": \" "+(String)lectura.getAcc()[1]+"\",";
-  json += " \"acc_z\": \" "+(String)lectura.getAcc()[3]+"\",";
+  json += " \"acc_z\": \" "+(String)lectura.getAcc()[2]+"\",";
   json += " \"gyr_x\": \" "+(String)lectura.getGyro()[0]+"\",";
   json += " \"gyr_y\": \" "+(String)lectura.getGyro()[1]+"\",";
   json += " \"gyr_z\": \" "+(String)lectura.getGyro()[2]+"\"";
