@@ -3,17 +3,14 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <ESP32_multipart.h>
+#include "Lectura.h"
 
-char* _ssid     = "***";           //Nombre de la red
-char* _password = "***";      //Contraseña de la red
+char* _ssid     = "***";   //Nombre de la red
+char* _password = "***";   //Contraseña de la red
 char* _server   = "****";  //IP del servidor de envio de archivos
-int   _port     = 5000;             //Puerto en el que esta escuchando el servidor de envio
+int   _port     = 5000;    //Puerto en el que esta escuchando el servidor de envio
 
 int _windowTime     = 2000;                   //Tiempo mínimo para capturar datos
-int _rangoAcc       = MPU6050_RANGE_4_G;      //Rango del acelerómetro
-int _rangoGir       = MPU6050_RANGE_250_DEG;  //Rango del giroscópio
-int _motionDetThold = 2;                      //Threshold para la detección de movimiento (G)
-int _motionDetDur   = 20;                     //Duración mínima del evento para la detección (ms)
 
 Adafruit_MPU6050 mpu;
 
@@ -34,19 +31,19 @@ void _iniciarMPU(){
       delay(10);
     }
   }
-  Serial.println("MPU6050 encontrado");
-  
+  Serial.println("MPU6050 encontrado");                 
+
   //Establecer el rango del acelerómetro y del giroscópio
-  mpu.setAccelerometerRange(_rangoAcc);
-  mpu.setGyroRange(_rangoGir);
+  mpu.setAccelerometerRange(MPU6050_RANGE_4_G); //Rango del acelerómetro
+  mpu.setGyroRange(MPU6050_RANGE_250_DEG);       //Rango del giroscópio
 
   //Establecer filtros del acelerómetro
   //mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
   //mpu.setHighPassFilter(MPU6050_HIGHPASS_0_63_HZ);
   
   //Establecer configuración del motion detection
-  mpu.setMotionDetectionThreshold(_motionDetThold);
-  mpu.setMotionDetectionDuration(_motionDetDur);
+  mpu.setMotionDetectionThreshold(2);   //Threshold para la detección de movimiento (G)
+  mpu.setMotionDetectionDuration(2000); //Duración mínima del evento para la detección (ms)
   
   //Aun no sé para qué se utiliza en.
   mpu.setInterruptPinLatch(true);  // Keep it latched.  Will turn off when reinitialized.
@@ -119,8 +116,34 @@ int _enviarArchivo(File file){
   return mpu.getMotionInterruptStatus();
  }
 
+
+/* Transformar una medición a JSON
+ * Utiliza un objeto Lectura por lo que es compatible con cualquier acelerómetro
+ * retorna String con objeto Json.
+ */
+ String _registroAJson(Lectura lectura){
+  String json = "{ \"time\": \" " +(String)millis() + "\",";
+  json += " \"acc_x\": \" "+(String)lectura.getAcc()[0]+"\",";
+  json += " \"acc_y\": \" "+(String)lectura.getAcc()[1]+"\",";
+  json += " \"acc_z\": \" "+(String)lectura.getAcc()[3]+"\",";
+  json += " \"gyr_x\": \" "+(String)lectura.getGyro()[0]+"\",";
+  json += " \"gyr_y\": \" "+(String)lectura.getGyro()[1]+"\",";
+  json += " \"gyr_z\": \" "+(String)lectura.getGyro()[2]+"\"";
+  json += " \"temp\": \" "+(String)lectura.getTemp()+"\"}";
+  return json;
+ }
+
+/*
+ * 
+ */
+ void _leerDatos(Lectura* lectura){
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  lectura->setValues(a.acceleration.v, g.gyro.v, temp.temperature);
+ }
 int nro_files = 0;        //Contador de archivos enviados.
 File file;                //Archivo de evento.
+Lectura lectura;          //Objeto de lectura
 boolean evento = false;   //Define si está ocurriendo un evento o no.
 boolean hayFile = false;  //Definirá si se debe enviar un archivo o capturar vibración.
 unsigned long start;      //contador de tiempo.
@@ -128,18 +151,17 @@ unsigned long start;      //contador de tiempo.
 void loop() {
   if(!hayFile){
     // Leer datos del acelerometro
-    sensors_event_t a, g, temp;
-    mpu.getEvent(&a, &g, &temp);
+    Lectura lectura;
+    _leerDatos(&lectura);
+        
 
     //Acciones a realizar si está ocurriendo un evento
     if(evento){
       // NOTA: Puede ser una función que a partir de los sensor_event a, g y temp retorne el string que será escrito en el archivo.
-      
+      file.println(_registroAJson(lectura));
       // Calcular aceleración modulo de vector
-      float acc = sqrt(a.acceleration.x*a.acceleration.x + a.acceleration.y*a.acceleration.y + a.acceleration.z*a.acceleration.z);
+      // float acc = sqrt(a.acceleration.x*a.acceleration.x + a.acceleration.y*a.acceleration.y + a.acceleration.z*a.acceleration.z);
       // Serial.println(acc);
-      // Aqui debe ir la escritura de la lectura en un archivo.
-      file.println( "{ \"time\": \" " +(String)millis() + "\", \"acc\": \" "+acc+"\"}");
 
       
       //Finlizar evento despues de x segundos o dar x segundos más si en ese momento hay movimiento. 
@@ -196,7 +218,7 @@ void loop() {
     Serial.println("Archivo abierto");
     Serial.print("Mandando archivo...");
     //Esta implementación se puede adaptar para otra placa.
-    int status = _enviarArchivo(file)
+    int status = _enviarArchivo(file);
     file.close();
     //Si el archivo fue enviado correctamente entonces eliminar archivo.
     if(status!=0){
@@ -206,6 +228,6 @@ void loop() {
       nro_files++;             //Aumentar contador de archivos enviados
     }
     else
-    ´Serial.println("No fue posible enviar el archivo, se intentarà nuevamente...");
+    Serial.println("No fue posible enviar el archivo, se intentarà nuevamente...");
   }
 }
