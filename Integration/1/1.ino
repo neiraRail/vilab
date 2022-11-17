@@ -5,12 +5,12 @@
 #include <ESP32_multipart.h>
 #include "Lectura.h"
 
-char* _ssid     = "***";   //Nombre de la red
-char* _password = "***";   //Contraseña de la red
-char* _server   = "****";  //IP del servidor de envio de archivos
-int   _port     = 5000;    //Puerto en el que esta escuchando el servidor de envio
+char* _ssid     = "***";    //Nombre de la red
+char* _password = "***";    //Contraseña de la red
+char* _server   = "****";   //IP del servidor de envio de archivos
+int   _port     = 5000;     //Puerto en el que esta escuchando el servidor de envio
 
-int _windowTime     = 2000;                   //Tiempo mínimo para capturar datos
+int _windowTime     = 2000; //Tiempo mínimo para capturar datos
 
 Adafruit_MPU6050 mpu;
 
@@ -87,24 +87,26 @@ int _enviarArchivo(File file){
   Serial.print(status);
   return status;
 }
+
 /*  Implementación de eliminar archivo. Utiliza la librería SPIFFS exclusiva de ESP32
  *  Se puede adaptar y utilizar cualquier otro metodo que elimine el archivo y retorne
  *  true o false
  */
- boolean _eliminarArchivo(String filename){
+boolean _eliminarArchivo(String filename){
   //Retorna true si fue eliminado correctamente.
   return SPIFFS.remove(filename);
- }
+}
+ 
 /*  Implementación de abrir archivo. Utliza lalibrería SPIFFS exclusiva de ESP32
  *  Se puede adaptar y utilizar un metodo que abra para abrir como lectura y escritura
  *  recibe filename(String) y 'r' o 'w'(Char)
  */
- File _abrirArchivo(String filename, char modo){
+File _abrirArchivo(String filename, char modo){
   if(modo == 'r')
     return SPIFFS.open(filename, "r");
   else
     return SPIFFS.open(filename, "w");
- }
+}
 
 /* Detectar evento
  * Utiliza la librería Adafruit_MPU6050 exclusiva para el acelerómetro MPU6050
@@ -112,16 +114,15 @@ int _enviarArchivo(File file){
  * ejes del acelerómetro supera el threshold indicado (en este caso 2).
  * Retorna true o false.
  */
- boolean _detectarEvento(){
+boolean _detectarEvento(){
   return mpu.getMotionInterruptStatus();
- }
-
+}
 
 /* Transformar una medición a JSON
  * Utiliza un objeto Lectura por lo que es compatible con cualquier acelerómetro
  * retorna String con objeto Json.
  */
- String _registroAJson(Lectura lectura){
+String _registroAJson(Lectura lectura){
   String json = "{ \"time\": \" " +(String)millis() + "\",";
   json += " \"acc_x\": \" "+(String)lectura.getAcc()[0]+"\",";
   json += " \"acc_y\": \" "+(String)lectura.getAcc()[1]+"\",";
@@ -131,16 +132,17 @@ int _enviarArchivo(File file){
   json += " \"gyr_z\": \" "+(String)lectura.getGyro()[2]+"\"";
   json += " \"temp\": \" "+(String)lectura.getTemp()+"\"}";
   return json;
- }
+}
 
-/*
- * 
+/* Lectura de datos utiliza la librería Adafruit_MPU6050 por lo que es exclusiva para el acelerometro mpu6050
+ *  recibe la referencia a un objeto lectura y le ingresa los valores.
  */
- void _leerDatos(Lectura* lectura){
+void _leerDatos(Lectura* lectura){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
   lectura->setValues(a.acceleration.v, g.gyro.v, temp.temperature);
- }
+}
+ 
 int nro_files = 0;        //Contador de archivos enviados.
 File file;                //Archivo de evento.
 Lectura lectura;          //Objeto de lectura
@@ -157,38 +159,34 @@ void loop() {
 
     //Acciones a realizar si está ocurriendo un evento
     if(evento){
-      // NOTA: Puede ser una función que a partir de los sensor_event a, g y temp retorne el string que será escrito en el archivo.
+      //Escribir registro en archivo.
       file.println(_registroAJson(lectura));
-      // Calcular aceleración modulo de vector
-      // float acc = sqrt(a.acceleration.x*a.acceleration.x + a.acceleration.y*a.acceleration.y + a.acceleration.z*a.acceleration.z);
-      // Serial.println(acc);
 
-      
       //Finlizar evento despues de x segundos o dar x segundos más si en ese momento hay movimiento. 
       //NOTA: Puede fallar por que aunque haya movimiento, podría calzar justo un instante de no movimiento
       //Una alterantiva mejor puede ser llevar un contador y subirlo y bajarlo dependiendo de si hay 
       //movimiento o no, cambiar la flag cuando el contador llegue a cero.
       //_windowTime es el tiempo mínimo de captura de evento.
       if(millis()-start > _windowTime){
-        // Finalizar evento
         if(!_detectarEvento()){
+          // Finalizar evento
           evento = false;
           file.println("]");
           file.close();
           hayFile = true;
         }
         //Si aún hay movimiento, se reinicia el contador para dar x segundos más.
-        else
+        else{
           start = millis();      
+          file.println(",\n");
+        }
       }
       // Si el evento no ha terminado, escribir coma.
       else
         file.println(",\n");
     }
-    else{ // !evento
+    else{ //Si no esta ocurriendo un evento
       if(_detectarEvento()){
-        // Detectar evento y cambiar flag evento
-        // Se crea un nuevo archivo
         start = millis();
         evento = true;
         //Abrir un archivo para escribir
@@ -217,13 +215,11 @@ void loop() {
     }
     Serial.println("Archivo abierto");
     Serial.print("Mandando archivo...");
-    //Esta implementación se puede adaptar para otra placa.
     int status = _enviarArchivo(file);
     file.close();
     //Si el archivo fue enviado correctamente entonces eliminar archivo.
     if(status!=0){
       _eliminarArchivo(filename);
-      
       hayFile = false;         //Volver a capturar datos
       nro_files++;             //Aumentar contador de archivos enviados
     }
