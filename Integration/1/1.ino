@@ -5,9 +5,9 @@
 #include <ESP32_multipart.h>
 #include "Lectura.h"
 
-char* _ssid     = "***";    //Nombre de la red
-char* _password = "***";    //Contraseña de la red
-char* _server   = "****";   //IP del servidor de envio de archivos
+char* _ssid     = "railxalkan";    //Nombre de la red
+char* _password = "familiarailxalkan";    //Contraseña de la red
+char* _server   = "192.168.88.129";   //IP del servidor de envio de archivos
 int   _port     = 5000;     //Puerto en el que esta escuchando el servidor de envio
 
 int _windowTime     = 2000; //Tiempo mínimo para capturar datos
@@ -43,7 +43,7 @@ void _iniciarMPU(){
   
   //Establecer configuración del motion detection
   mpu.setMotionDetectionThreshold(2);   //Threshold para la detección de movimiento (G)
-  mpu.setMotionDetectionDuration(2000); //Duración mínima del evento para la detección (ms)
+  mpu.setMotionDetectionDuration(20); //Duración mínima del evento para la detección (ms)
   
   //Aun no sé para qué se utiliza en.
   mpu.setInterruptPinLatch(true);  // Keep it latched.  Will turn off when reinitialized.
@@ -145,12 +145,12 @@ void _leerDatos(Lectura* lectura){
  
 int nro_files = 0;        //Contador de archivos enviados.
 File file;                //Archivo de evento.
-Lectura lectura;          //Objeto de lectura
 boolean evento = false;   //Define si está ocurriendo un evento o no.
 boolean hayFile = false;  //Definirá si se debe enviar un archivo o capturar vibración.
 unsigned long start;      //contador de tiempo.
 
 void loop() {
+  
   if(!hayFile){
     // Leer datos del acelerometro
     Lectura lectura;
@@ -160,6 +160,7 @@ void loop() {
     //Acciones a realizar si está ocurriendo un evento
     if(evento){
       //Escribir registro en archivo.
+      Serial.println(lectura.getAcc()[0]);
       file.println(_registroAJson(lectura));
 
       //Finlizar evento despues de x segundos o dar x segundos más si en ese momento hay movimiento. 
@@ -187,6 +188,7 @@ void loop() {
     }
     else{ //Si no esta ocurriendo un evento
       if(_detectarEvento()){
+        Serial.print("Evento detectado");
         start = millis();
         evento = true;
         //Abrir un archivo para escribir
@@ -198,7 +200,8 @@ void loop() {
           return;
         }
         file.println("[");
-      } 
+      }
+      delay(500);
     }
   }
   else{
