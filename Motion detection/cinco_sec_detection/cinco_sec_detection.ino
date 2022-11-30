@@ -18,7 +18,7 @@ void setup() {
       delay(10);
     }
   }
-  Serial.println("MPU6050 encontrado");
+  //Serial.println("MPU6050 encontrado");
   
   //Establecer el rango del acelerómetro y del giroscópio
   mpu.setAccelerometerRange(MPU6050_RANGE_4_G);
@@ -28,7 +28,7 @@ void setup() {
   //mpu.setHighPassFilter(MPU6050_HIGHPASS_0_63_HZ);
   //Establecer configuración del motion detection
   mpu.setMotionDetectionThreshold(2);
-  mpu.setMotionDetectionDuration(20);
+  mpu.setMotionDetectionDuration(2);
   
   //Aun no sé para qué se utiliza.
   mpu.setInterruptPinLatch(true);  // Keep it latched.  Will turn off when reinitialized.
@@ -36,7 +36,6 @@ void setup() {
   mpu.setMotionInterrupt(true);
 }
 
-File file;
 //Flag de evento
 boolean plottear = false;
 boolean hayFile = false;

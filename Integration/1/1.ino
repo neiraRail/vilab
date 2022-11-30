@@ -5,12 +5,12 @@
 #include <ESP32_multipart.h>
 #include "Lectura.h"
 
-char* _ssid     = "railxalkan";    //Nombre de la red
-char* _password = "familiarailxalkan";    //Contraseña de la red
-char* _server   = "192.168.88.129";   //IP del servidor de envio de archivos
-int   _port     = 5000;     //Puerto en el que esta escuchando el servidor de envio
+char* _ssid     = "CEIS";         //Nombre de la red
+char* _password = "CEIS.2022";  //Contraseña de la red
+char* _server   = "129.151.100.69";     //IP del servidor de envio de archivos
+int   _port     = 8080;                 //Puerto en el que esta escuchando el servidor de envio
 
-int _windowTime     = 2000; //Tiempo mínimo para capturar datos
+int _windowTime = 2000; //Tiempo mínimo para capturar datos
 
 Adafruit_MPU6050 mpu;
 
@@ -43,7 +43,7 @@ void _iniciarMPU(){
   
   //Establecer configuración del motion detection
   mpu.setMotionDetectionThreshold(2);   //Threshold para la detección de movimiento (G)
-  mpu.setMotionDetectionDuration(20); //Duración mínima del evento para la detección (ms)
+  mpu.setMotionDetectionDuration(2); //Duración mínima del evento para la detección (ms)
   
   //Aun no sé para qué se utiliza en.
   mpu.setInterruptPinLatch(true);  // Keep it latched.  Will turn off when reinitialized.
@@ -51,13 +51,23 @@ void _iniciarMPU(){
   mpu.setMotionInterrupt(true);
 }
 
+void _restart(){
+  ESP.restart();
+}
+
 void _iniciarWIFI(){
+  unsigned long mytime;
+  
   Serial.print("Intentando conectando a la siguiente red: ");
   Serial.println(_ssid);
   WiFi.begin(_ssid, _password);
+  mytime = millis();
   while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
+      if(millis() - mytime > 5000){
+        _restart();
+      }
   }
     Serial.println("");
   Serial.println("WiFi conectado");
@@ -75,6 +85,8 @@ void setup() {
   _iniciarSPIFFS();
   _iniciarMPU();
   _iniciarWIFI();  
+
+  Serial.println("Esperando evento...");
 }
 
 /*  Implementación de enviar archivo. Esta utiliza la librería ESP32_multipart exclusiva de ESP32.
@@ -148,7 +160,7 @@ File file;                //Archivo de evento.
 boolean evento = false;   //Define si está ocurriendo un evento o no.
 boolean hayFile = false;  //Definirá si se debe enviar un archivo o capturar vibración.
 unsigned long start;      //contador de tiempo.
-
+int intentos = 0;
 void loop() {
   
   if(!hayFile){
@@ -200,13 +212,18 @@ void loop() {
           return;
         }
         file.println("[");
+      }else{
+        Serial.println("Eperando evento...");
       }
-      delay(500);
+      delay(500); //tiempo de espera para detectar.
     }
   }
   else{
-    // Esto se ejecuta cuando hay un archivo, es decir
-    // hayFile == true
+    if(intentos>5){
+      for(;;);
+    }
+    intentos++;
+    // Esto se ejecuta cuando hay un archivo, es decir hayFile == true
     // La lectura se pausa hasta que el archivo se haya enviado.
     // Serial.println("HAY FILE");
     
