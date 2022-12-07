@@ -2,15 +2,15 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-const char* ssid = "SSID";
-const char* password = "PASSWORD";
+const char* ssid = "CEIS";
+const char* password = "CEIS.2022";
 
-WiFiClient wifi;
+//WiFiClient wifi;
 
 void sendPost(){
   HTTPClient http;
 
-  http.begin("http://localhost:5000/events"); //POST endpoint
+  http.begin("http://129.151.100.69:8080/status"); //POST endpoint
     
   Serial.println("Haciendo POST request...");
   http.addHeader("Content-Type", "application/json"); //Json format
@@ -34,7 +34,7 @@ void sendPost(){
 void sendGet(){
   HTTPClient http;
 
-  http.begin("http://localhost:5000/events"); //GET endpoint
+  http.begin("http://129.151.100.69:8080/status"); //GET endpoint
     
   Serial.println("Haciendo GET request..."); //Json format
   int httpCode = http.GET();
