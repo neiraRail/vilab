@@ -35,8 +35,8 @@ void Task1code( void * pvParameters ){
   Serial.println(xPortGetCoreID());
 
   for(;;){
-    Serial.println("Hola desde task1");
-    delay(10000);
+    Serial.println(millis());
+    delay(1000);
   } 
 }
 
