@@ -1,16 +1,14 @@
 #include "Acc_MPU6050.h"
 
 int Acc_MPU6050::iniciar() {
-	Serial.println("Buscando aceler�metro MPU6050...");
+	Serial.println("Buscando acelerometro MPU6050...");
 	if (!this->mpu.begin()) {
 		Serial.println(F("Failed to find MPU6050 chip"));
-		while (1) {
-			delay(10);
-		}
+		return 0;
 	}
 	Serial.println("MPU6050 encontrado");
 
-	//Establecer el rango del aceler�metro y del girosc�pio
+	//Establecer el rango del acelerometro y del girosc�pio
 	this->mpu.setAccelerometerRange(MPU6050_RANGE_4_G); //Rango del aceler�metro
 	this->mpu.setGyroRange(MPU6050_RANGE_250_DEG);       //Rango del girosc�pio
 

@@ -10,15 +10,17 @@
 #endif
 
 #include "IAcelerometro.h"
+#include "IConection.h"
 
 class VilabUnit {
 public:
-	VilabUnit(IAcelerometro& imu);
+	VilabUnit(IAcelerometro& imu, IConnection& con);
 	int initAll();
   void hola();
 
 private:
 	IAcelerometro& imu;
+  IConnection& con;
 
 };
 
