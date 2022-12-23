@@ -10,8 +10,6 @@ char* _password = "familiarailxalkan";  //Contraseña de la red
 char* _server   = "129.151.100.69";     //IP del servidor de envio de archivos
 int   _port     = 8080;                 //Puerto en el que esta escuchando el servidor de envio
 
-int _windowTime = 2000; //Tiempo mínimo para capturar datos
-
 Adafruit_MPU6050 mpu;
 
 void _iniciarSPIFFS(){
@@ -75,6 +73,32 @@ void _iniciarWIFI(){
   Serial.println(WiFi.localIP());
 }
 
+#include <HTTPClient.h>
+
+void _probarAPI(){
+  HTTPClient http;
+
+  http.begin("http://129.151.100.69:8080/status"); //GET endpoint
+    
+  Serial.println("Probando API..."); //Json format
+  int httpCode = http.GET();
+    
+  String payload = http.getString();
+  if (httpCode > 0){
+      
+    Serial.println(httpCode);
+    Serial.println(payload);
+  }
+  else{
+    Serial.println(httpCode);
+      
+    Serial.println(payload);
+    Serial.println("Error");
+    _restart();
+  }
+  http.end();
+}
+
 void setup() {
   //Empezar y esperar el monitor serial
   Serial.begin(115200);
@@ -84,9 +108,13 @@ void setup() {
   
   _iniciarSPIFFS();
   _iniciarMPU();
-  _iniciarWIFI();  
+  _iniciarWIFI();
 
-  Serial.println("Esperando evento...");
+  _probarAPI();
+
+  Serial.println("Comenzando benchmark");
+  Serial.println("Se mediran los tiempos de envío de archivos \ncon mediciones de 5, 60, 300 y 600 seg");
+  Serial.println("");
 }
 
 /*  Implementación de enviar archivo. Esta utiliza la librería ESP32_multipart exclusiva de ESP32.
@@ -154,96 +182,76 @@ void _leerDatos(Lectura* lectura){
   mpu.getEvent(&a, &g, &temp);
   lectura->setValues(a.acceleration.v, g.gyro.v, temp.temperature);
 }
- 
-int nro_files = 0;        //Contador de archivos enviados.
+
+int segundos[4] = {5000, 10000, 30000, 60000};
 File file;                //Archivo de evento.
-boolean evento = false;   //Define si está ocurriendo un evento o no.
-boolean hayFile = false;  //Definirá si se debe enviar un archivo o capturar vibración.
 unsigned long start;      //contador de tiempo.
-int intentos = 0;
 void loop() {
-  
-  if(!hayFile){
-    // Leer datos del acelerometro
-    Lectura lectura;
-    _leerDatos(&lectura);
-        
-
-    //Acciones a realizar si está ocurriendo un evento
-    if(evento){
-      //Escribir registro en archivo.
-      Serial.println(lectura.getAcc()[0]);
-      file.println(_registroAJson(lectura));
-
-      //Finlizar evento despues de x segundos o dar x segundos más si en ese momento hay movimiento. 
-      //NOTA: Puede fallar por que aunque haya movimiento, podría calzar justo un instante de no movimiento
-      //Una alterantiva mejor puede ser llevar un contador y subirlo y bajarlo dependiendo de si hay 
-      //movimiento o no, cambiar la flag cuando el contador llegue a cero.
-      //_windowTime es el tiempo mínimo de captura de evento.
-      if(millis()-start > _windowTime){
-        if(!_detectarEvento()){
-          // Finalizar evento
-          evento = false;
-          file.println("]");
-          file.close();
-          hayFile = true;
-        }
-        //Si aún hay movimiento, se reinicia el contador para dar x segundos más.
-        else{
-          start = millis();      
-          file.println(",\n");
-        }
-      }
-      // Si el evento no ha terminado, escribir coma.
-      else
-        file.println(",\n");
-    }
-    else{ //Si no esta ocurriendo un evento
-      if(_detectarEvento()){
-        Serial.print("Evento detectado");
-        start = millis();
-        evento = true;
-        //Abrir un archivo para escribir
-        String filename = String("/evento")+nro_files+".txt";
-        file = _abrirArchivo(filename, 'w');
-        if(!file){
-          Serial.println("Fallo al abrir archivo para escribir");
-          evento = false;
-          return;
-        }
-        file.println("[");
-      }else{
-        Serial.println("Eperando evento...");
-      }
-      delay(500); //tiempo de espera para detectar.
-    }
-  }
-  else{
-    if(intentos>5){
-      for(;;);
-    }
-    intentos++;
-    // Esto se ejecuta cuando hay un archivo, es decir hayFile == true
-    // La lectura se pausa hasta que el archivo se haya enviado.
-    // Serial.println("HAY FILE");
+  for(int i=0;i<4;i++){
+    Serial.print("Benchmark de ventana con ");
+    Serial.print(segundos[i]/1000);
+    Serial.println(" segundos de datos.");
+    //Comenzamos a contar
+    start = millis();
+    bool capturando = true;
     
-    String filename = String("/evento")+nro_files+".txt";
+    //Abrir un archivo para escribir
+    String filename = String("/evento_")+segundos[i]+"seg.txt";
+    file = _abrirArchivo(filename, 'w');
+    if(!file){
+      Serial.println("Fallo al abrir archivo para escribir");
+      capturando = false;
+      return;
+    }
+    file.println("[");
+    
+
+    while(capturando){
+      //Leer datos
+      Lectura lectura;
+      _leerDatos(&lectura);
+      
+      //Imprimir en archivo
+      //Serial.println(lectura.getAcc()[0]);
+      file.println(_registroAJson(lectura));
+      
+      //Si ha pasado el tiempo asignado
+      if(millis()-start > segundos[i]){
+        // Finalizar evento
+        capturando = false;
+        file.println("]");
+        file.close();
+      }
+      else{
+        //Si no se finaliza, se pone una coma
+        file.println(",\n");
+      }
+    }
+    //Enviar archivo
+    unsigned long comienzoLectura = millis();
     file = _abrirArchivo(filename, 'r');
     if(!file){
       Serial.println("Fallo al abrir archivo para leer, se intentará nuevamente...");
       return;
     }
     Serial.println("Archivo abierto");
-    Serial.print("Mandando archivo...");
-    int status = _enviarArchivo(file);
+    Serial.println("Mandando archivo...");
+    unsigned long comienzoEnvio = millis();
+    _enviarArchivo(file);
+    comienzoEnvio = millis() - comienzoEnvio;
+    Serial.println("");
     file.close();
-    //Si el archivo fue enviado correctamente entonces eliminar archivo.
-    if(status!=0){
-      _eliminarArchivo(filename);
-      hayFile = false;         //Volver a capturar datos
-      nro_files++;             //Aumentar contador de archivos enviados
-    }
-    else
-    Serial.println("No fue posible enviar el archivo, se intentarà nuevamente...");
+    //Eliminar archivo
+    _eliminarArchivo(filename);
+    comienzoLectura = millis() - comienzoLectura;
+
+    Serial.println("Resultados benchmark para "+(String)(segundos[i]/1000) + " segundos");
+    Serial.print("Tiempo completo: ");
+    Serial.println(comienzoLectura);
+    Serial.print("Tiempo de envío: ");
+    Serial.println(comienzoEnvio);
+    
   }
+  Serial.println("Benchmark finalizado");
+  for(;;);
 }
