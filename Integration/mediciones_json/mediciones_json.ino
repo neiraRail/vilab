@@ -101,7 +101,7 @@ void setup() {
   _probarAPI();
 
   Serial.println("Comenzando benchmark");
-  Serial.println("Se mediran los tiempos de envío de archivos \ncon mediciones de 5, 60, 300 y 600 seg");
+  Serial.println("Se mediran los tiempos de envío de archivos \ncon mediciones de 100, 200, 500 y 1000 vectores");
   Serial.println("");
 }
 
@@ -121,14 +121,14 @@ boolean _detectarEvento(){
  * retorna String con objeto Json.
  */
 String _registroAJson(Lectura lectura){
-  String json = "{ \"time\": \" " +(String)millis() + "\",";
-  json += " \"acc_x\": \" "+(String)lectura.getAcc()[0]+"\",";
-  json += " \"acc_y\": \" "+(String)lectura.getAcc()[1]+"\",";
-  json += " \"acc_z\": \" "+(String)lectura.getAcc()[2]+"\",";
-  json += " \"gyr_x\": \" "+(String)lectura.getGyro()[0]+"\",";
-  json += " \"gyr_y\": \" "+(String)lectura.getGyro()[1]+"\",";
-  json += " \"gyr_z\": \" "+(String)lectura.getGyro()[2]+"\",";
-  json += " \"temp\": \" "+(String)lectura.getTemp()+"\"}";
+  String json = "{ \"time\":\"" +(String)millis() + "\",";
+  json += "\"acc_x\":\""+(String)lectura.getAcc()[0]+"\",";
+  json += "\"acc_y\":\""+(String)lectura.getAcc()[1]+"\",";
+  json += "\"acc_z\":\""+(String)lectura.getAcc()[2]+"\",";
+  json += "\"gyr_x\":\""+(String)lectura.getGyro()[0]+"\",";
+  json += "\"gyr_y\":\""+(String)lectura.getGyro()[1]+"\",";
+  json += "\"gyr_z\":\""+(String)lectura.getGyro()[2]+"\",";
+  json += "\"temp\":\""+(String)lectura.getTemp()+"\"}";
   return json;
 }
 
@@ -164,22 +164,22 @@ int _enviarJson(String json){
   return 0;
 }
 
-int segundos[4] = {500, 1000, 3000, 6000};
+// Tiempos equivalentes a 30HZ:
+//                 1s  2s   5s  10s
+int segundos[4] = {30, 60, 150, 300};
 unsigned long start;      //contador de tiempo.
 void loop() {
   for(int i=0;i<4;i++){
     Serial.print("Benchmark de ventana con ");
-    Serial.print(segundos[i]/1000);
-    Serial.println(" segundos de datos.");
+    Serial.print(segundos[i]);
+    Serial.println(" mediciones");
     //Comenzamos a contar
     start = millis();
-    bool capturando = true;
     
     //Documento Json para guardar datos
-    String json = "{\"data\":[";
+    String json = "[";
     
-
-    while(capturando){
+    for(int j=0; j<=segundos[i];j++){
       //Leer datos
       Lectura lectura;
       _leerDatos(&lectura);
@@ -188,17 +188,14 @@ void loop() {
       //Serial.println(lectura.getAcc()[0]);
       json += _registroAJson(lectura);
       
-      //Si ha pasado el tiempo asignado
-      if(millis()-start > segundos[i]){
-        // Finalizar evento
-        capturando = false;
-        json += "]}";
-      }
-      else{
+      if(j<segundos[i]){
         //Si no se finaliza, se pone una coma
         json += ",\n";
       }
     }
+    // Finalizar evento
+    json += "]";
+    
     //Enviar archivo
     unsigned long comienzoLectura = millis();
     Serial.println("lrgo del json: "+(String)json.length());
@@ -209,7 +206,7 @@ void loop() {
     Serial.println("");
     comienzoLectura = millis() - comienzoLectura;
 
-    Serial.println("Resultados benchmark para "+(String)(segundos[i]/1000) + " segundos");
+    Serial.println("Resultados benchmark para "+(String)(segundos[i]) + " mediciones");
     Serial.print("Tiempo completo: ");
     Serial.println(comienzoLectura);
     Serial.print("Tiempo de envío: ");
